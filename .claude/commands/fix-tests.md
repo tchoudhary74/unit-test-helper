@@ -1,73 +1,130 @@
+---
+description: Fix and refactor tests to match team standards
+argument-hint: [test-file] [--check]
+allowed-tools: Bash(npm test:*), Bash(npx jest:*)
+---
+
 # Fix Tests Command
 
-Fix and refactor tests to match team standards for: $ARGUMENTS
+Fix and refactor tests to match team standards.
 
-## Analysis Steps
+**Arguments:** `$ARGUMENTS`
 
-1. **Read the test file** specified in arguments
-2. **Identify violations** against these rules:
+---
 
-| Rule | Check | Severity |
-|------|-------|----------|
-| Has `describe()` | Must have `describe\s*\(` | ❌ Required |
-| Has `it()` or `test()` | Must have `(it\|test)\s*\(` | ❌ Required |
-| `it()` uses "should" | Should match `it\s*\(\s*['"]should` | ⚠️ Warning |
-| Has assertions | Must have `expect\s*\(` | ❌ Required |
-| No `.only()`/`.skip()` | Must NOT have `\.(only\|skip)\s*\(` | ❌ Required |
-| Tests edge cases | Should have null/undefined/empty/error tests | ⚠️ Warning |
+## Step 1: Parse Arguments
 
-3. **Detect test type** from content:
-   - `render(` + `screen.` → React component
-   - `renderHook(` → React hook
-   - `jest.mock(` + api/fetch/http → API service
-   - Otherwise → Utility function
+```
+ARGUMENTS = "$ARGUMENTS"
 
-## Common Fixes
+# Check for --check flag (validate only, no fixes)
+If ARGUMENTS contains "--check":
+  MODE = "validate"
+  Remove "--check" from ARGUMENTS
+Else:
+  MODE = "fix"
 
-### Fix 1: Rename `it()` to use "should"
+# Validate remaining arguments
+If ARGUMENTS is empty:
+  ERROR: "Please provide a test file path"
+  EXAMPLE: "/fix-tests src/components/Button.test.tsx"
+  Stop execution
+
+If ARGUMENTS does NOT contain .test. or .spec.:
+  WARNING: "This doesn't look like a test file"
+  Stop execution
+```
+
+---
+
+## Step 2: Find and Read Test File
+
+**Action:** Use Glob to find the test file, then Read to get its content.
+
+```
+Search patterns:
+1. Exact path: $ARGUMENTS
+2. In src/: src/**/$ARGUMENTS
+3. Anywhere: **/$ARGUMENTS
+```
+
+If not found:
+- Display error: "Test file not found: [path]"
+- Stop execution
+
+Store file path as `TEST_FILE_PATH` and content for analysis.
+
+---
+
+## Step 3: Analyze Violations
+
+Check the test file against these rules:
+
+| Rule | How to Check | Severity |
+|------|--------------|----------|
+| Has `describe()` | Look for `describe(` | Required |
+| Has `it()` or `test()` | Look for `it(` or `test(` | Required |
+| `it()` uses "should" | Check if `it('should` pattern | Warning |
+| Has assertions | Look for `expect(` | Required |
+| No `.only()` | Must NOT have `.only(` | Required |
+| No `.skip()` | Must NOT have `.skip(` | Required |
+
+**Detect test type:**
+- `render(` + `screen.` → React Component
+- `renderHook(` → React Hook
+- `jest.mock(` + http/api/fetch → API Service
+- Otherwise → Utility Function
+
+---
+
+## Step 4: Apply Fixes (Skip if MODE = "validate")
+
+**If MODE = "validate":** Skip to Step 6 (Output Summary)
+
+**If MODE = "fix":** Apply relevant fixes based on violations found:
+
+### Fix: Rename `it()` to use "should"
+
 ```typescript
-// ❌ Before
+// Before
 it('renders', () => { ... });
 it('handles click', () => { ... });
 
-// ✅ After  
+// After
 it('should render without crashing', () => { ... });
-it('should call handler when clicked', () => { ... });
+it('should handle click event', () => { ... });
 ```
 
-### Fix 2: Add `describe()` grouping
+### Fix: Add `describe()` grouping
+
 ```typescript
-// ❌ Before
+// Before
 it('should render', () => { ... });
 it('should click', () => { ... });
-it('should handle null', () => { ... });
 
-// ✅ After
+// After
 describe('ComponentName', () => {
   describe('rendering', () => {
     it('should render without crashing', () => { ... });
   });
 
   describe('interactions', () => {
-    it('should call handler when clicked', () => { ... });
-  });
-
-  describe('edge cases', () => {
-    it('should handle null gracefully', () => { ... });
+    it('should handle click event', () => { ... });
   });
 });
 ```
 
-### Fix 3: Add AAA spacing
+### Fix: Add AAA spacing
+
 ```typescript
-// ❌ Before (cramped)
+// Before (cramped)
 it('should update', () => {
   const { result } = renderHook(() => useCounter());
   act(() => { result.current.increment(); });
   expect(result.current.count).toBe(1);
 });
 
-// ✅ After (clear sections)
+// After (clear sections)
 it('should update count when increment called', () => {
   const { result } = renderHook(() => useCounter());
 
@@ -79,59 +136,102 @@ it('should update count when increment called', () => {
 });
 ```
 
-### Fix 4: Remove `.only()` and `.skip()`
+### Fix: Remove `.only()` and `.skip()`
+
 ```typescript
-// ❌ Before
+// Before
 describe.only('Component', () => { ... });
 it.skip('should work', () => { ... });
 
-// ✅ After
+// After
 describe('Component', () => { ... });
 it('should work', () => { ... });
 ```
 
-### Fix 5: Add missing edge case tests
-```typescript
-// Add these if missing:
-describe('edge cases', () => {
-  it('should handle null input', () => {
-    expect(functionName(null)).toBe(defaultValue);
-  });
+---
 
-  it('should handle undefined input', () => {
-    expect(functionName(undefined)).toBe(defaultValue);
-  });
+## Step 5: Write Updated File (Skip if MODE = "validate")
 
-  it('should handle empty string', () => {
-    expect(functionName('')).toBe(defaultValue);
-  });
-});
+**If MODE = "validate":** Skip to Step 6
+
+**If MODE = "fix":**
+- Use Edit tool to apply the fixes to `TEST_FILE_PATH`
+- Apply changes incrementally - fix one issue at a time to maintain stability
+
+---
+
+## Step 6: Verify Tests Pass (Skip if MODE = "validate")
+
+**If MODE = "validate":** Skip test execution, just show validation results in Output Summary.
+
+**If MODE = "fix":** Run the fixed tests to ensure nothing broke.
+
+Check `package.json` scripts.test:
+- If `"jest src/"` (path-based): Use `--testPathPattern`
+- If `"jest"` (simple): Pass file directly
+
+```bash
+# Path-based script (most common)
+npm test -- --testPathPattern="[filename]" --watchAll=false
+
+# Simple script
+npm test -- [file-path] --watchAll=false
 ```
 
-## Output Format
+If tests fail after fixes:
+- Review the changes
+- Revert problematic fix
+- Report which fix caused the issue
 
-After fixing, report:
+---
+
+## Output Summary
+
+### If MODE = "fix"
+
 ```
-✅ Fixed: [filename]
-
-Changes made:
-• Renamed X it() blocks to use "should" prefix
-• Added describe() grouping for rendering/interactions/edge cases  
-• Removed N .only() calls
-• Added M edge case tests
-• Applied AAA spacing
+Fixed: [filename]
+───────────────────────────────────────
+Changes Made:
+  • Renamed X it() blocks to use "should"
+  • Added describe() grouping
+  • Removed N .only()/.skip() calls
+  • Applied AAA spacing
 
 Validation:
-✅ PASS  Has describe() blocks
-✅ PASS  Has it() or test()
-✅ PASS  it() uses "should" naming
-✅ PASS  Has assertions
-✅ PASS  No .only() or .skip()
+  ✓ Has describe() blocks
+  ✓ Has it() or test()
+  ✓ Uses "should" naming
+  ✓ Has assertions
+  ✓ No .only() or .skip()
+
+Tests: PASSED
+───────────────────────────────────────
 ```
 
-## After Fixing
+### If MODE = "validate" (--check flag)
 
-Run the tests to ensure nothing broke:
-```bash
-npm test -- [test-file-path] --watchAll=false --verbose
+```
+Validated: [filename]
+───────────────────────────────────────
+Results:
+  ✓ Has describe() blocks
+  ✓ Has it() or test()
+  ✗ Missing "should" naming (3 violations)
+  ✓ Has assertions
+  ✗ Found .only() (line 23)
+
+Status: 2 issues found
+───────────────────────────────────────
+Run without --check to auto-fix these issues.
+```
+
+---
+
+## Quick Reference
+
+```
+/fix-tests Button.test.tsx              # Fix test file
+/fix-tests Button.test.tsx --check      # Validate only (no changes)
+/fix-tests src/hooks/useAuth.test.ts    # Fix with full path
 ```

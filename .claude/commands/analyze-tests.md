@@ -1,120 +1,134 @@
+---
+description: Discover testing patterns and conventions in codebase
+argument-hint: [path]
+---
+
 # Analyze Test Patterns Command
 
-Analyze testing patterns and conventions in: $ARGUMENTS
+Discover testing patterns and conventions used in this codebase.
 
-If no path specified, analyze the entire project.
+**Arguments:** `$ARGUMENTS` (optional path, defaults to entire project)
 
-## Analysis Process
+---
 
-### Step 1: Find Test Files
-```bash
-find . -name "*.test.ts" -o -name "*.test.tsx" -o -name "*.spec.ts" -o -name "*.spec.tsx" | grep -v node_modules
-```
+## Step 1: Find Test Files
 
-### Step 2: Sample Recent Tests
-Get the 5 most recently modified test files (represent current standards):
-```bash
-ls -t $(find . -name "*.test.tsx" -o -name "*.test.ts" | grep -v node_modules) 2>/dev/null | head -5
-```
-
-### Step 3: Extract Patterns
-
-For each sampled file, identify:
-
-**Structure Patterns**
-- [ ] Uses `describe()` blocks?
-- [ ] Uses `it()` or `test()`?
-- [ ] Uses `beforeEach`/`afterEach`?
-- [ ] Has nested describe blocks?
-
-**Naming Patterns**
-- [ ] `it()` starts with "should"?
-- [ ] `describe()` uses component/function name?
-- [ ] Consistent capitalization?
-
-**Import Patterns**
-- [ ] Import order (React → testing-lib → components → utils)
-- [ ] Testing library used (@testing-library/react?)
-- [ ] User event library (userEvent vs fireEvent)
-
-**Mocking Patterns**
-- [ ] `jest.mock()` for modules
-- [ ] `jest.fn()` for functions
-- [ ] `jest.spyOn()` for methods
-- [ ] `mockResolvedValue`/`mockRejectedValue` for async
-
-**Assertion Patterns**
-- [ ] DOM: `toBeInTheDocument()`, `toHaveTextContent()`
-- [ ] Calls: `toHaveBeenCalled()`, `toHaveBeenCalledWith()`
-- [ ] Values: `toBe()`, `toEqual()`, `toMatchObject()`
-- [ ] Async: `resolves`, `rejects`
-
-**Code Organization**
-- [ ] AAA pattern with spacing?
-- [ ] Comments for Arrange/Act/Assert?
-- [ ] Default props pattern?
-- [ ] Test utilities/helpers?
-
-## Output Format
+**Action:** Use Glob to find test files in the project.
 
 ```
-╔════════════════════════════════════════════════════════════════╗
-║  TEST PATTERN ANALYSIS                                          ║
-╠════════════════════════════════════════════════════════════════╣
-║  Files Analyzed: N                                              ║
-║  Path: [analyzed path]                                          ║
-╚════════════════════════════════════════════════════════════════╝
-
-┌─ Files Sampled ────────────────────────────────────────────────┐
-│ • src/components/Button.test.tsx                               │
-│ • src/hooks/useAuth.test.ts                                    │
-│ • src/utils/format.test.ts                                     │
-└────────────────────────────────────────────────────────────────┘
-
-┌─ Structure ────────────────────────────────────────────────────┐
-│ Pattern        : describe + it                                 │
-│ beforeEach     : ✓ Used                                        │
-│ afterEach      : ✗ Not used                                    │
-│ Nested describe: ✓ Used (rendering, interactions, edge cases) │
-└────────────────────────────────────────────────────────────────┘
-
-┌─ Naming Conventions ───────────────────────────────────────────┐
-│ it() naming    : "should + verb" (e.g., "should render...")   │
-│ describe()     : Component/function name                       │
-│ Examples:                                                      │
-│   • describe('Button', ...)                                    │
-│   • it('should render with default props', ...)                │
-│   • it('should call onClick when clicked', ...)                │
-└────────────────────────────────────────────────────────────────┘
-
-┌─ Libraries & Imports ──────────────────────────────────────────┐
-│ Testing Library: @testing-library/react                        │
-│ User Events    : userEvent (not fireEvent)                     │
-│ Utilities      : render, screen, waitFor, act                  │
-│ Import Order   : react → testing-lib → components → mocks      │
-└────────────────────────────────────────────────────────────────┘
-
-┌─ Mocking Patterns ─────────────────────────────────────────────┐
-│ • jest.mock() for module mocking                               │
-│ • jest.fn() for function mocks                                 │
-│ • mockResolvedValue() for async success                        │
-│ • mockRejectedValue() for async errors                         │
-└────────────────────────────────────────────────────────────────┘
-
-┌─ Assertion Style ──────────────────────────────────────────────┐
-│ DOM      : toBeInTheDocument(), toHaveTextContent()            │
-│ Calls    : toHaveBeenCalledWith(), toHaveBeenCalledTimes()     │
-│ Values   : toBe(), toEqual()                                   │
-└────────────────────────────────────────────────────────────────┘
-
-## Recommendations
-
-Follow these patterns exactly when writing new tests in this codebase.
+Pattern: **/*.test.{ts,tsx,js,jsx}
+Also:    **/*.spec.{ts,tsx,js,jsx}
+Exclude: node_modules
 ```
 
-## Also Check For
+If no test files found:
+- Display: "No test files found in this project"
+- Stop execution
 
-- `.jest-helper.json` config file in project root
-- `jest.config.js` or `jest.config.ts` for Jest configuration
-- `setupTests.ts` for global test setup
-- Custom test utilities in `src/test-utils/` or similar
+Store count as `TOTAL_TEST_FILES`.
+
+---
+
+## Step 2: Sample Recent Tests
+
+Select 2-3 test files for analysis (recent files represent current standards).
+
+**Action:** Use Glob results sorted by modification time, take first 3.
+
+If `$ARGUMENTS` specifies a path, analyze files in that path only.
+
+---
+
+## Step 3: Read and Analyze Patterns
+
+**Action:** Use Read tool to examine each sampled file.
+
+Extract these patterns:
+
+### Structure
+| Pattern | Look For |
+|---------|----------|
+| Test blocks | `describe(` vs `test(` only |
+| Assertions | `it(` vs `test(` |
+| Setup/teardown | `beforeEach`, `afterEach`, `beforeAll` |
+| Nesting | Nested `describe()` blocks |
+
+### Naming
+| Pattern | Look For |
+|---------|----------|
+| Test naming | `it('should...` vs `it('...` |
+| Describe naming | Component name vs description |
+
+### Imports
+| Pattern | Look For |
+|---------|----------|
+| Testing library | `@testing-library/react` vs `enzyme` |
+| User events | `userEvent` vs `fireEvent` |
+| Import order | React → testing-lib → component → mocks |
+
+### Mocking
+| Pattern | Look For |
+|---------|----------|
+| Module mocks | `jest.mock()` |
+| Function mocks | `jest.fn()` |
+| Spy | `jest.spyOn()` |
+| Async mocks | `mockResolvedValue`, `mockRejectedValue` |
+
+---
+
+## Step 4: Check Configuration Files
+
+**Action:** Use Glob to check for these files:
+
+| File | Purpose |
+|------|---------|
+| `jest.config.js` or `jest.config.ts` | Jest configuration |
+| `setupTests.ts` or `setupTests.js` | Global test setup |
+| `.jest-helper.json` | Team-specific rules |
+| `src/test-utils/` | Custom test utilities |
+
+---
+
+## Output Summary
+
+```
+Test Patterns Analysis
+───────────────────────────────────────
+Files Found: [N] test files
+Sampled: [2-3 files]
+
+Structure:
+  • Uses: describe() + it()
+  • Setup: beforeEach (cleanup)
+  • Nesting: Yes (rendering, interactions, edge cases)
+
+Naming:
+  • it() style: "should + verb"
+  • describe(): Component/function name
+
+Libraries:
+  • Testing: @testing-library/react
+  • Events: userEvent
+  • Imports: react → testing-lib → component
+
+Mocking:
+  • jest.mock() for modules
+  • jest.fn() for callbacks
+  • mockResolvedValue for async
+
+Config:
+  • jest.config.ts: Found
+  • setupTests.ts: Found
+───────────────────────────────────────
+
+Use these patterns when writing new tests.
+```
+
+---
+
+## Quick Reference
+
+```
+/analyze-tests                    # Analyze entire project
+/analyze-tests src/components     # Analyze specific directory
+```
