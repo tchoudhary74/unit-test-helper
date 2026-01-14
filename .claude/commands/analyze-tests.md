@@ -13,7 +13,7 @@ Discover testing patterns and conventions used in this codebase.
 
 ## Step 1: Find Test Files
 
-**Action:** Use Glob to find test files in the project.
+Use Glob to find test files:
 
 ```
 Pattern: **/*.test.{ts,tsx,js,jsx}
@@ -21,9 +21,7 @@ Also:    **/*.spec.{ts,tsx,js,jsx}
 Exclude: node_modules
 ```
 
-If no test files found:
-- Display: "No test files found in this project"
-- Stop execution
+If no test files found → Display "No test files found" and stop.
 
 Store count as `TOTAL_TEST_FILES`.
 
@@ -33,7 +31,7 @@ Store count as `TOTAL_TEST_FILES`.
 
 Select 2-3 test files for analysis (recent files represent current standards).
 
-**Action:** Use Glob results sorted by modification time, take first 3.
+Use Glob results sorted by modification time, take first 3.
 
 If `$ARGUMENTS` specifies a path, analyze files in that path only.
 
@@ -41,11 +39,9 @@ If `$ARGUMENTS` specifies a path, analyze files in that path only.
 
 ## Step 3: Read and Analyze Patterns
 
-**Action:** Use Read tool to examine each sampled file.
+Read each sampled file and extract:
 
-Extract these patterns:
-
-### Structure
+### Structure Patterns
 | Pattern | Look For |
 |---------|----------|
 | Test blocks | `describe(` vs `test(` only |
@@ -53,20 +49,20 @@ Extract these patterns:
 | Setup/teardown | `beforeEach`, `afterEach`, `beforeAll` |
 | Nesting | Nested `describe()` blocks |
 
-### Naming
+### Naming Patterns
 | Pattern | Look For |
 |---------|----------|
 | Test naming | `it('should...` vs `it('...` |
 | Describe naming | Component name vs description |
 
-### Imports
+### Import Patterns
 | Pattern | Look For |
 |---------|----------|
 | Testing library | `@testing-library/react` vs `enzyme` |
 | User events | `userEvent` vs `fireEvent` |
 | Import order | React → testing-lib → component → mocks |
 
-### Mocking
+### Mocking Patterns
 | Pattern | Look For |
 |---------|----------|
 | Module mocks | `jest.mock()` |
@@ -78,47 +74,47 @@ Extract these patterns:
 
 ## Step 4: Check Configuration Files
 
-**Action:** Use Glob to check for these files:
+Use Glob to check for:
 
 | File | Purpose |
 |------|---------|
 | `jest.config.js` or `jest.config.ts` | Jest configuration |
 | `setupTests.ts` or `setupTests.js` | Global test setup |
-| `.jest-helper.json` | Team-specific rules |
 | `src/test-utils/` | Custom test utilities |
 
 ---
 
-## Output Summary
+## Output
 
 ```
 Test Patterns Analysis
 ───────────────────────────────────────
 Files Found: [N] test files
-Sampled: [2-3 files]
+Sampled: [list of 2-3 files analyzed]
 
 Structure:
   • Uses: describe() + it()
   • Setup: beforeEach (cleanup)
-  • Nesting: Yes (rendering, interactions, edge cases)
+  • Nesting: Yes/No
 
 Naming:
-  • it() style: "should + verb"
+  • it() style: "should + verb" | other
   • describe(): Component/function name
 
 Libraries:
-  • Testing: @testing-library/react
-  • Events: userEvent
-  • Imports: react → testing-lib → component
+  • Testing: @testing-library/react | enzyme | other
+  • Events: userEvent | fireEvent
+  • Imports: [detected order]
 
 Mocking:
-  • jest.mock() for modules
-  • jest.fn() for callbacks
-  • mockResolvedValue for async
+  • jest.mock() for modules: Yes/No
+  • jest.fn() for callbacks: Yes/No
+  • mockResolvedValue for async: Yes/No
 
-Config:
-  • jest.config.ts: Found
-  • setupTests.ts: Found
+Config Files:
+  • jest.config: Found/Not found
+  • setupTests: Found/Not found
+  • test-utils/: Found/Not found
 ───────────────────────────────────────
 
 Use these patterns when writing new tests.

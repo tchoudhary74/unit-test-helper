@@ -12,186 +12,74 @@ Write comprehensive Jest tests for a source file.
 
 ---
 
-## Step 1: Parse Arguments
-
-Analyze `$ARGUMENTS` to extract the source file path.
-
-### Expected Input
-
-| Input | Example |
-|-------|---------|
-| File path | `src/components/Button.tsx` |
-| File name only | `Button.tsx` |
-| Relative path | `./utils/format.ts` |
-
-### Validation
+## Step 1: Validate Input
 
 ```
 If $ARGUMENTS is empty:
-  ERROR: "Please provide a source file path"
-  EXAMPLE: "/write-tests src/components/Button.tsx"
-  Stop execution
+  → Error: "Please provide a source file path"
+  → Example: "/write-tests src/components/Button.tsx"
 
-If $ARGUMENTS contains test/spec in filename:
-  WARNING: "This appears to be a test file, not a source file"
-  SUGGESTION: "Did you mean to use /fix-tests instead?"
-  Stop execution
+If $ARGUMENTS contains .test. or .spec.:
+  → Error: "This appears to be a test file. Use /fix-tests instead"
 ```
 
 ---
 
 ## Step 2: Find Source File
 
-**Action:** Use Glob tool to locate the source file.
+Use Glob to locate the file:
+1. Exact path: `$ARGUMENTS`
+2. In src/: `src/**/$ARGUMENTS`
+3. Anywhere: `**/$ARGUMENTS`
 
-```
-Search patterns (in order):
-1. Exact path: $ARGUMENTS
-2. In src/: src/**/$ARGUMENTS
-3. Anywhere: **/$ARGUMENTS
-```
-
-If not found:
-- Display error: "Source file not found: [path]"
-- Search for similar: `**/*[partial-name]*`
-- If similar found: "Did you mean: [suggestions]"
-- Stop execution
-
-Store result as `SOURCE_FILE_PATH`.
+If not found → Show error with similar file suggestions.
 
 ---
 
-## Step 3: Read Source File
+## Step 3: Read & Analyze Source File
 
-**Action:** Use Read tool to read `SOURCE_FILE_PATH`.
+Read the source file and determine type:
 
-Store the content for analysis in Step 6.
-
----
-
-## Step 4: Check Existing Tests
-
-Determine the expected test file location:
-
-```
-SOURCE: src/components/Button.tsx
-TEST OPTIONS:
-  1. src/components/Button.test.tsx (same directory)
-  2. src/components/__tests__/Button.test.tsx (__tests__ folder)
-  3. src/components/Button.spec.tsx (.spec variant)
-```
-
-**Action:** Use Glob tool to check if test file already exists.
-
-If test file exists:
-- Display: "Test file already exists: [path]"
-- Ask: "Overwrite existing tests or add to them?"
-- Options: Overwrite | Append | Cancel
+| Look For | Type | Template to Use |
+|----------|------|-----------------|
+| React import + JSX return | React Component | COMPONENT |
+| Function name starts with `use` + calls hooks | React Hook | HOOK |
+| axios/fetch import + async HTTP methods | API Service | API |
+| Pure functions, helpers, formatters | Utility | UTILITY |
 
 ---
 
-## Step 5: Detect Project Configuration
+## Step 4: Detect Project Configuration
 
-### Language Detection
+1. **Language:** Check for `tsconfig.json`
+   - Found → TypeScript (use `.test.tsx`)
+   - Not found → JavaScript (use `.test.jsx`)
 
-**Action:** Use Glob to check for TypeScript config:
-
-| File Found | Language |
-|------------|----------|
-| `tsconfig.json` | TypeScript |
-| `jsconfig.json` | JavaScript |
-| Neither | Check source file extension |
-
-```
-.ts, .tsx → TypeScript (use .test.tsx)
-.js, .jsx → JavaScript (use .test.jsx)
-```
-
-Store as `PROJECT_LANG` and `TEST_EXTENSION`.
-
-### Test Convention Detection
-
-**Action:** Use Glob to find 1-2 existing test files:
-```
-Pattern: **/*.test.{ts,tsx,js,jsx}
-Exclude: node_modules
-Limit: 2 most recent
-```
-
-If found, use Read tool to extract:
-- Import style (ES6 vs require)
-- Describe/it vs test() style
-- beforeEach/afterEach usage
-- Naming conventions
-
-Store as `TEAM_CONVENTIONS`.
+2. **Team Conventions:** Read 1-2 existing test files to match:
+   - Import style
+   - describe/it vs test() pattern
+   - Naming conventions
+   - beforeEach/afterEach usage
 
 ---
 
-## Step 6: Analyze Source File & Select Template
+## Step 5: Check for Existing Tests
 
-Analyze the source file content to determine the type:
-
-### Detection Logic
-
+Determine test file location:
 ```
-SOURCE FILE ANALYSIS:
-
-1. React Component?
-   ├── Has: import React OR import { ... } from 'react'
-   ├── Has: JSX syntax (return <...> or return (...<))
-   ├── Has: export default/named function or const
-   └── Result: Use REACT_COMPONENT_TEMPLATE
-
-2. React Hook?
-   ├── Has: function name starts with "use" (useAuth, useState custom)
-   ├── Has: calls useState, useEffect, useCallback, etc.
-   ├── Has: returns object or array
-   └── Result: Use REACT_HOOK_TEMPLATE
-
-3. API Service?
-   ├── Has: import axios OR import fetch OR http client
-   ├── Has: async/await with HTTP methods (get, post, put, delete)
-   ├── Has: API endpoints or URLs
-   └── Result: Use API_SERVICE_TEMPLATE
-
-4. Utility Function?
-   ├── Default: pure functions, helpers, formatters
-   └── Result: Use UTILITY_FUNCTION_TEMPLATE
+Source: src/components/Button.tsx
+Check:
+  1. src/components/Button.test.tsx
+  2. src/components/__tests__/Button.test.tsx
 ```
 
-Store selected template as `TEMPLATE_TYPE`.
+If exists → Ask: Overwrite | Append | Cancel
 
 ---
 
-## Step 7: Generate Tests
+## Step 6: Generate Tests Using Template
 
-### Import Order (apply to all templates)
-
-```typescript
-// 1. React/framework (if applicable)
-import React from 'react';
-
-// 2. Testing libraries
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-// OR for hooks:
-import { renderHook, act } from '@testing-library/react';
-
-// 3. Component/module being tested
-import { ComponentName } from './ComponentName';
-
-// 4. Mocks (after imports)
-jest.mock('./api');
-```
-
-**JavaScript Note:** For JS projects, remove type annotations and use `.js`/`.jsx` extensions.
-
----
-
-### Template: React Component
-
-**Use when:** Source has React import + JSX return
+### React Component Template
 
 ```typescript
 import React from 'react';
@@ -242,9 +130,7 @@ describe('ComponentName', () => {
 
 ---
 
-### Template: React Hook
-
-**Use when:** Function name starts with `use`, returns state/methods
+### React Hook Template
 
 ```typescript
 import { renderHook, act } from '@testing-library/react';
@@ -283,9 +169,7 @@ describe('useHookName', () => {
 
 ---
 
-### Template: Utility Function
-
-**Use when:** Pure functions, formatters, helpers, validators
+### Utility Function Template
 
 ```typescript
 import { functionName } from './functionName';
@@ -328,9 +212,7 @@ describe('functionName', () => {
 
 ---
 
-### Template: API Service
-
-**Use when:** Contains axios/fetch, async HTTP calls
+### API Service Template
 
 ```typescript
 import { apiFunction } from './apiService';
@@ -387,73 +269,38 @@ describe('apiFunction', () => {
 
 ---
 
-## Step 8: Write Test File
+## Step 7: Write Test File
 
-Determine test file path:
+Write to: `[source-directory]/[name].test.[tsx|jsx]`
 
-```
-SOURCE: src/components/Button.tsx
-
-TEST PATH (based on team convention or default):
-  Default: src/components/Button.test.tsx
-  Or: src/components/__tests__/Button.test.tsx
-```
-
-**Action:** Use Write tool to create the test file.
+Or if team uses `__tests__/`: `[source-directory]/__tests__/[name].test.[tsx|jsx]`
 
 ---
 
-## Step 9: Verify Tests (Optional)
+## Step 8: Verify Tests Pass
 
-**Action:** Run the tests to ensure they pass.
-
-### Analyze Test Script (from package.json)
-
-Check `scripts.test` to determine how to run a specific file:
-
-| Script Pattern | Example | Command to Use |
-|----------------|---------|----------------|
-| Simple jest | `"jest"` | `npm test -- [file-path]` |
-| Jest with path | `"jest src/"` | `npm test -- --testPathPattern="[filename]"` |
-| react-scripts | `"react-scripts test"` | `npm test -- --testPathPattern="[filename]"` |
-
-### Run Verification
+Run the generated tests:
 
 ```bash
-# If script is simple ("jest" or "jest --config=...")
-npm test -- src/components/Button.test.tsx --watchAll=false
-
-# If script has path ("jest src/") - use testPathPattern
-npm test -- --testPathPattern="Button.test.tsx" --watchAll=false
-
-# If script is complex - bypass and use npx
-npx jest src/components/Button.test.tsx --watchAll=false
+npm test -- --testPathPattern="[filename]" --watchAll=false
 ```
 
-### Handle Results
-
-If tests pass:
-- Display success message
-- Show test count
-
 If tests fail:
-- Show failure details
-- Common fixes:
-  - Missing mock: Add `jest.mock('./module')`
-  - Async error: Add `await` or use `waitFor`
-  - DOM query fail: Check element roles/text
+- Missing mock → Add `jest.mock('./module')`
+- Async error → Add `await` or use `waitFor`
+- DOM query fail → Check element roles/text
 
 ---
 
-## Output Summary
+## Output
 
 ```
 Test File Created
-─────────────────────────────────────
-Source:    src/components/Button.tsx
-Test:      src/components/Button.test.tsx
-Type:      React Component
-Language:  TypeScript
+───────────────────────────────────────
+Source:   [source file path]
+Test:     [test file path]
+Type:     [Component|Hook|Utility|API]
+Language: [TypeScript|JavaScript]
 
 Tests Generated:
   • rendering (2 tests)
@@ -462,9 +309,9 @@ Tests Generated:
 
 Next Steps:
   1. Review generated tests
-  2. Update placeholder values (defaultProps, expectedValue, etc.)
-  3. Run: /run-tests Button.test.tsx
-─────────────────────────────────────
+  2. Update placeholder values
+  3. Run: /run-tests [test-file]
+───────────────────────────────────────
 ```
 
 ---
@@ -472,8 +319,8 @@ Next Steps:
 ## Quick Reference
 
 ```
-/write-tests Button.tsx                    # Write tests for component
-/write-tests src/hooks/useAuth.ts          # Write tests for hook
-/write-tests utils/format.js               # Write tests for utility
-/write-tests services/api.ts               # Write tests for API service
+/write-tests Button.tsx                # Component
+/write-tests src/hooks/useAuth.ts      # Hook
+/write-tests utils/format.js           # Utility
+/write-tests services/api.ts           # API service
 ```

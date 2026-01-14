@@ -15,75 +15,57 @@ Fix and refactor tests to match team standards.
 ## Step 1: Parse Arguments
 
 ```
-ARGUMENTS = "$ARGUMENTS"
-
-# Check for --check flag (validate only, no fixes)
-If ARGUMENTS contains "--check":
-  MODE = "validate"
-  Remove "--check" from ARGUMENTS
+If $ARGUMENTS contains "--check":
+  MODE = "validate"  # Check only, no changes
+  Remove "--check" from $ARGUMENTS
 Else:
   MODE = "fix"
 
-# Validate remaining arguments
-If ARGUMENTS is empty:
-  ERROR: "Please provide a test file path"
-  EXAMPLE: "/fix-tests src/components/Button.test.tsx"
-  Stop execution
+If $ARGUMENTS is empty:
+  → Error: "Please provide a test file path"
+  → Example: "/fix-tests src/components/Button.test.tsx"
 
-If ARGUMENTS does NOT contain .test. or .spec.:
-  WARNING: "This doesn't look like a test file"
-  Stop execution
+If $ARGUMENTS does NOT contain .test. or .spec.:
+  → Warning: "This doesn't look like a test file"
 ```
 
 ---
 
 ## Step 2: Find and Read Test File
 
-**Action:** Use Glob to find the test file, then Read to get its content.
+Use Glob to find:
+1. Exact path: `$ARGUMENTS`
+2. In src/: `src/**/$ARGUMENTS`
+3. Anywhere: `**/$ARGUMENTS`
 
-```
-Search patterns:
-1. Exact path: $ARGUMENTS
-2. In src/: src/**/$ARGUMENTS
-3. Anywhere: **/$ARGUMENTS
-```
-
-If not found:
-- Display error: "Test file not found: [path]"
-- Stop execution
-
-Store file path as `TEST_FILE_PATH` and content for analysis.
+Read file content for analysis.
 
 ---
 
 ## Step 3: Analyze Violations
 
-Check the test file against these rules:
+Check test file against these rules:
 
-| Rule | How to Check | Severity |
-|------|--------------|----------|
-| Has `describe()` | Look for `describe(` | Required |
-| Has `it()` or `test()` | Look for `it(` or `test(` | Required |
-| `it()` uses "should" | Check if `it('should` pattern | Warning |
-| Has assertions | Look for `expect(` | Required |
-| No `.only()` | Must NOT have `.only(` | Required |
-| No `.skip()` | Must NOT have `.skip(` | Required |
+| Rule | Check For | Severity |
+|------|-----------|----------|
+| Has describe() | `describe(` present | Required |
+| Has it() or test() | `it(` or `test(` present | Required |
+| Uses "should" naming | `it('should` pattern | Warning |
+| Has assertions | `expect(` present | Required |
+| No .only() | Must NOT have `.only(` | Required |
+| No .skip() | Must NOT have `.skip(` | Required |
 
 **Detect test type:**
 - `render(` + `screen.` → React Component
 - `renderHook(` → React Hook
-- `jest.mock(` + http/api/fetch → API Service
+- `jest.mock(` + http/api → API Service
 - Otherwise → Utility Function
 
 ---
 
 ## Step 4: Apply Fixes (Skip if MODE = "validate")
 
-**If MODE = "validate":** Skip to Step 6 (Output Summary)
-
-**If MODE = "fix":** Apply relevant fixes based on violations found:
-
-### Fix: Rename `it()` to use "should"
+### Fix: Rename it() to use "should"
 
 ```typescript
 // Before
@@ -95,7 +77,7 @@ it('should render without crashing', () => { ... });
 it('should handle click event', () => { ... });
 ```
 
-### Fix: Add `describe()` grouping
+### Fix: Add describe() grouping
 
 ```typescript
 // Before
@@ -114,7 +96,7 @@ describe('ComponentName', () => {
 });
 ```
 
-### Fix: Add AAA spacing
+### Fix: Add AAA spacing (Arrange-Act-Assert)
 
 ```typescript
 // Before (cramped)
@@ -136,7 +118,7 @@ it('should update count when increment called', () => {
 });
 ```
 
-### Fix: Remove `.only()` and `.skip()`
+### Fix: Remove .only() and .skip()
 
 ```typescript
 // Before
@@ -152,30 +134,16 @@ it('should work', () => { ... });
 
 ## Step 5: Write Updated File (Skip if MODE = "validate")
 
-**If MODE = "validate":** Skip to Step 6
-
-**If MODE = "fix":**
-- Use Edit tool to apply the fixes to `TEST_FILE_PATH`
-- Apply changes incrementally - fix one issue at a time to maintain stability
+Use Edit tool to apply fixes incrementally - one issue at a time.
 
 ---
 
 ## Step 6: Verify Tests Pass (Skip if MODE = "validate")
 
-**If MODE = "validate":** Skip test execution, just show validation results in Output Summary.
-
-**If MODE = "fix":** Run the fixed tests to ensure nothing broke.
-
-Check `package.json` scripts.test:
-- If `"jest src/"` (path-based): Use `--testPathPattern`
-- If `"jest"` (simple): Pass file directly
+Run the fixed tests:
 
 ```bash
-# Path-based script (most common)
 npm test -- --testPathPattern="[filename]" --watchAll=false
-
-# Simple script
-npm test -- [file-path] --watchAll=false
 ```
 
 If tests fail after fixes:
@@ -185,7 +153,7 @@ If tests fail after fixes:
 
 ---
 
-## Output Summary
+## Output
 
 ### If MODE = "fix"
 
