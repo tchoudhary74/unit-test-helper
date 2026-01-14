@@ -10,6 +10,8 @@ Find source files that don't have corresponding test files.
 
 **Arguments:** `$ARGUMENTS`
 
+**IMPORTANT:** Use Glob and Read tools directly. Do NOT generate Python/Bash scripts.
+
 ---
 
 ## Step 1: Parse Arguments
@@ -28,18 +30,24 @@ SCAN_PATH = $ARGUMENTS is empty ? "src/" : $ARGUMENTS
 
 ## Step 2: Find Source Files
 
-Use Glob to find source files:
+**Use Glob tool** with patterns:
+- `[SCAN_PATH]/**/*.ts`
+- `[SCAN_PATH]/**/*.tsx`
+- `[SCAN_PATH]/**/*.js`
+- `[SCAN_PATH]/**/*.jsx`
 
-```
-Patterns: **/*.ts, **/*.tsx, **/*.js, **/*.jsx
-Exclude: node_modules, *.test.*, *.spec.*, __tests__/, __mocks__/
-```
+Exclude from results:
+- Files in `node_modules/`
+- Files matching `*.test.*` or `*.spec.*`
+- Files in `__tests__/` or `__mocks__/`
+
+Store as `SOURCE_FILES`.
 
 ---
 
-## Step 3: Apply Exclusions
+## Step 3: Filter Testable Files
 
-Skip files that typically don't need direct tests:
+From `SOURCE_FILES`, exclude files that don't need tests:
 
 | Pattern | Reason |
 |---------|--------|
@@ -58,25 +66,25 @@ Store filtered list as `TESTABLE_FILES`.
 
 **If MODE = "quick":**
 
-For each file in `TESTABLE_FILES`, check if test file exists:
+For each file in `TESTABLE_FILES`, **use Glob tool** to check if test exists:
 
 ```
-Source: src/components/Button.tsx
+Example: src/components/Button.tsx
 
-Check for (in order):
-1. src/components/Button.test.tsx
-2. src/components/Button.test.ts
-3. src/components/Button.spec.tsx
-4. src/components/__tests__/Button.test.tsx
+Use Glob to check (stop at first match):
+  1. src/components/Button.test.tsx
+  2. src/components/Button.test.ts
+  3. src/components/Button.spec.tsx
+  4. src/components/Button.spec.ts
+  5. src/components/__tests__/Button.test.tsx
+  6. src/components/__tests__/Button.test.ts
 ```
 
-Use Glob to verify each pattern.
+**Do this in memory** - categorize each file as:
+- `WITH_TESTS` - Glob found a matching test file
+- `WITHOUT_TESTS` - Glob found no matching test file
 
-Categorize:
-- `WITH_TESTS` - has a test file
-- `WITHOUT_TESTS` - missing test file
-
-**Skip to Output**
+**Skip to Step 6 (Output)**
 
 ---
 
@@ -84,50 +92,48 @@ Categorize:
 
 **If MODE = "coverage":**
 
-Run Jest with fresh coverage (always run fresh, don't use old coverage/ folder):
+**Use Bash tool** to run Jest coverage (fresh run, ignore old coverage/ folder):
 
 ```bash
 npm test -- --coverage --watchAll=false
 ```
 
-**Note:** If `scripts.test` is path-based (`jest src/`), the command still works for coverage.
-
-Parse Jest console output to extract:
+Parse the Jest console output directly to extract:
 - File paths
 - % Statements, Branches, Functions, Lines
 
-Categorize:
-- `COVERED` - files with >0% coverage
+Categorize from output:
 - `UNCOVERED` - files with 0% coverage
 - `LOW_COVERAGE` - files with <50% line coverage
+- `COVERED` - files with >50% coverage
 
 ---
 
 ## Step 6: Categorize by Type
 
-Group files by type for organized output:
+Group `WITHOUT_TESTS` or `UNCOVERED` files by type:
 
 | Pattern | Category |
 |---------|----------|
-| `components/` or `.tsx` with JSX | Components |
-| `hooks/` or `use*.ts` | Hooks |
-| `utils/` or `helpers/` | Utils |
-| `services/` or `api/` | Services |
+| Path contains `components/` | Components |
+| Path contains `hooks/` or filename `use*.ts` | Hooks |
+| Path contains `utils/` or `helpers/` | Utils |
+| Path contains `services/` or `api/` | Services |
 | Other | Other |
 
 ---
 
-## Output
+## Step 7: Output Results
 
 ### Quick Mode Output
 
 ```
 Untested Files Report
 ───────────────────────────────────────
-Scanned: [path]
-Source files: [total]
-With test files: [count]
-Missing test files: [count]
+Scanned: [SCAN_PATH]
+Source files: [count of TESTABLE_FILES]
+With test files: [count of WITH_TESTS]
+Missing test files: [count of WITHOUT_TESTS]
 ───────────────────────────────────────
 
 Missing Test Files:
@@ -180,9 +186,9 @@ To write tests: /write-tests [file]
 
 ## Notes
 
-- **Quick mode** is fast but only checks if test files exist (not quality)
-- **Coverage mode** runs all tests (slower but accurate)
-- Coverage mode always runs fresh - ignores old `coverage/` folder
+- **Quick mode** checks if test files exist (fast, file-based)
+- **Coverage mode** runs Jest for actual coverage data (slower, accurate)
+- Coverage mode always runs fresh - ignores stale `coverage/` folder
 - Use quick mode for daily checks, coverage mode for CI/reviews
 
 ---
