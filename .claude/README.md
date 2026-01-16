@@ -100,3 +100,57 @@ By default, these standards are enforced:
 ## Customization
 
 Edit any `.md` file in `.claude/commands/` to adjust the instructions for your team's specific needs.
+
+As part of our recent hackathon, we explored how we can use Claude in a more effective and consistent way across our projects.
+
+What we noticed is that most of the time, Claude is used as a generic assistant. It’s powerful, but the quality of the output depends heavily on how you ask the question. Different prompts lead to different answers — and sometimes the answer is right, sometimes it’s close, and over time that can lead to inconsistency.
+
+So we tried something different.
+
+We focused on turning Claude from a generic assistant into a repeatable teammate that follows our standards, using Claude Custom Commands.
+
+At a simple level, Claude Custom Commands are reusable, standardized prompts that live directly in the project. They’re defined once as a one-time setup, and from that point on, anyone on the team can run the exact same workflow and get consistent results.
+
+But the real value isn’t just reuse — it’s removing prompt skill from the equation.
+
+Developers no longer need to know how to phrase the perfect question or remember all the project context. The command already knows, because we’ve given it a clear and detailed understanding of what it needs to do and how it should do it.
+
+The end result is faster onboarding, more consistent code and tests, and less dependency on who knows what or how a question is asked.
+
+⸻
+
+Use Case 1: Writing Unit Tests
+
+The first command we focused on was writing unit tests, because it’s something we do repeatedly across UI projects.
+
+For this, we created a Custom Command backed by a simple markdown file. That file clearly defines our testing patterns — how test files should be structured, how mocks should look, and how describe and test blocks are organized.
+
+When the command runs, Claude doesn’t just generate a test from scratch. It first:
+	•	reads the source file,
+	•	identifies whether it’s a component, hook, utility, or API,
+	•	and looks at one or two existing test files in the repo to match our conventions.
+
+Based on that, it generates a test that already follows our patterns and fits naturally into the codebase.
+
+The goal here isn’t just speed — it’s consistency. The tests look like something a team member would write, not something generated and then rewritten.
+
+⸻
+
+Use Case 2: Onboarding a Developer
+
+The second command — and arguably the most impactful one — is onboarding.
+
+This command is designed for a very common scenario: someone new to a project trying to run a UI application locally.
+
+When the onboarding command runs, it first understands the project structure. Since we started with UI applications, it looks for the main module, finds the package.json, and understands how the app is built and run using NPM.
+
+From there, it:
+	•	installs dependencies,
+	•	runs an audit to check for vulnerabilities or outdated packages,
+	•	applies fixes where possible,
+	•	and then walks the developer through exactly how to run the application locally.
+
+While many projects already have a README, this command turns onboarding into a guided workflow instead of a manual, trial-and-error process.
+
+Instead of guessing or searching through documentation, the developer is guided step by step based on the actual state of the repo.
+
